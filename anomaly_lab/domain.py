@@ -47,6 +47,8 @@ class TimeSeriesDataset:
         if not np.all(np.isfinite(values)):
             raise ValueError("values must be finite")
         for event in self.events:
+            if event.start < self.calibration_end:
+                raise ValueError("events must start after the calibration boundary")
             if event.end > len(values):
                 raise ValueError("event exceeds series length")
 
@@ -69,9 +71,13 @@ class DetectionResult:
     def __post_init__(self) -> None:
         scores = np.asarray(self.scores)
         predictions = np.asarray(self.predictions)
+        if not self.detector:
+            raise ValueError("detector must not be empty")
         if scores.ndim != 1 or predictions.ndim != 1:
             raise ValueError("scores and predictions must be one-dimensional")
         if len(scores) != len(predictions):
             raise ValueError("scores and predictions must have equal length")
+        if not np.all(np.isfinite(scores)):
+            raise ValueError("scores must be finite")
         if not np.isfinite(self.threshold):
             raise ValueError("threshold must be finite")
