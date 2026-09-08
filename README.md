@@ -1,88 +1,248 @@
-# Time-Series Anomaly Lab
+# Time-Series Anomaly Detection Lab
 
-A public benchmark harness for **unsupervised and weakly supervised time-series anomaly detection**.
+A public-safe, executable benchmark for **time-series anomaly scoring, threshold calibration, and event-level evaluation**.
 
-The project is designed around a common real-world constraint: multivariate or univariate sensor data may have little or no reliable anomaly labeling. The repository therefore emphasizes reproducible preprocessing, windowing, reconstruction/error scoring, threshold calibration and model comparison rather than a single magic detector.
+This repository deliberately focuses on the engineering details that make anomaly-detection experiments trustworthy: temporal leakage, calibration boundaries, causal scoring, event definitions, false alarms, detection delay, and reproducible model comparison.
 
-## Scope
+It uses synthetic data only. It contains **no employer data, flight-test data, internal labels, proprietary thresholds, or private model artifacts**.
 
-Planned / supported experiment families include:
+## Why this is more than a detector demo
 
-- statistical baselines
-- rolling z-score and robust MAD thresholds
-- PCA reconstruction error
-- dense autoencoders
-- convolutional autoencoders
-- LSTM / CNN-LSTM autoencoders
-- temporal convolutional autoencoders
-- VAE-style models
+A detector can look excellent if its threshold is selected using the same anomalous period on which it is evaluated. A centered rolling statistic can also accidentally use future observations. Both mistakes create optimistic results without improving the deployed system.
 
-## Public-data boundary
+This lab makes those boundaries explicit.
 
-This repository uses **synthetic and public datasets only**. It contains no employer sensor data, flight-test data, proprietary labels or internal thresholds.
+```mermaid
+flowchart LR
+    D[Public-safe synthetic series] --> F[Normal-only fit segment]
+    D --> C[Normal-only calibration holdout]
+    D --> E[Untouched evaluation segment]
 
-## Pipeline
+    F --> M[Detector fit]
+    M --> CS[Calibration scores]
+    C --> CS
+    CS --> T[Frozen threshold]
+
+    F --> RF[Refit on all clean pre-evaluation history]
+    C --> RF
+    RF --> ES[Evaluation scores]
+    E --> ES
+    T --> P[Predictions]
+    ES --> P
+
+    P --> PM[Point metrics]
+    P --> EM[Event metrics]
+    EM --> R[Benchmark report]
+    PM --> R
+```
+
+The threshold is frozen **before** the evaluation region is scored.
+
+## Current detector families
+
+### Causal rolling MAD
+
+`CausalRollingMADDetector` compares each sample against a robust median/MAD estimate built only from observations available before that sample.
+
+It is intentionally causal. The test suite verifies that scoring a prefix produces the same values whether or not future samples are later supplied.
+
+### Adaptive EWMA
+
+`AdaptiveEWMADetector` maintains an exponentially weighted baseline and scores the residual before updating its state. Large residuals are clipped during adaptation so one extreme point cannot instantly drag the baseline toward itself.
+
+### PCA window reconstruction
+
+`PCAWindowReconstructionDetector` creates temporal windows, standardizes them from normal training history, learns a low-rank basis with NumPy SVD, and uses reconstruction error as the anomaly score.
+
+This provides a reconstruction-style baseline without pretending it is a neural autoencoder.
+
+## Synthetic benchmark
+
+`generate_synthetic_series` creates a deterministic non-stationary signal with:
+
+- periodic structure;
+- changing noise scale;
+- isolated spike events;
+- a level shift;
+- a progressive drift.
+
+The initial calibration region is guaranteed anomaly-free. Injected events occur only after the evaluation boundary.
 
 ```text
-Raw series
-   |
-   v
-Cleaning / scaling
-   |
-   v
-Sliding windows
-   |
-   +--> baseline features
-   |
-   +--> reconstruction models
-   |
-   v
-Anomaly score
-   |
-   v
-Threshold calibration
-   |
-   v
-Event-level evaluation + plots
+0 --------------------------------------------------------------> time
+|              clean history             |      evaluation       |
+| fit segment | threshold holdout         | spikes / shift / drift|
 ```
+
+This is not intended to be a universal benchmark dataset. It is an executable fixture for testing experiment semantics without exposing private data.
+
+## Threshold calibration
+
+Two calibration strategies are implemented:
+
+- `QuantileCalibrator`: threshold from a high score quantile;
+- `RobustSigmaCalibrator`: median plus a configurable robust MAD-derived scale.
+
+Calibration scores come from a later **normal-only holdout**, not from the detector's fit segment and not from the evaluation anomalies.
+
+After calibration, the detector is refit on all clean history available before deployment. The frozen threshold is then used on the untouched evaluation region.
+
+## Evaluation
+
+The lab reports both point-level and event-level behavior.
+
+### Point metrics
+
+- precision;
+- recall;
+- F1;
+- specificity;
+- TP / FP / FN / TN.
+
+### Event metrics
+
+- detected events / total events;
+- event recall;
+- false-positive **runs**, rather than only false-positive points;
+- false alarms per 1,000 normal points;
+- mean detection delay;
+- maximum detection delay;
+- optional event-boundary tolerance.
+
+Why event metrics matter: firing 30 times inside one five-minute incident should not necessarily be interpreted the same way as detecting 30 independent incidents.
+
+## Package layout
+
+```text
+anomaly_lab/
+├── calibration.py   # normal-only threshold estimation
+├── cli.py           # reproducible command-line benchmark
+├── detectors.py     # causal MAD, adaptive EWMA, PCA reconstruction
+├── domain.py        # dataset, event and detection contracts
+├── evaluation.py    # point + event metrics
+├── experiment.py    # leakage-aware benchmark orchestration
+└── synthetic.py     # deterministic public-safe benchmark data
+
+tests/
+├── test_detectors.py
+├── test_evaluation.py
+└── test_experiment.py
+```
+
+The original root `demo.py` remains as a convenience entrypoint, but it is no longer where the implementation lives.
 
 ## Quick start
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
+
+anomaly-lab benchmark --samples 5000 --seed 42 --output report.json
+```
+
+The old workflow still works:
+
+```bash
 python demo.py
 ```
 
-`demo.py` generates a synthetic sensor series with injected spikes, drifts and level shifts, then compares robust statistical scores using the same evaluation interface that later neural models can plug into.
+Alternative robust-score calibration:
 
-## Why this repository exists
+```bash
+anomaly-lab benchmark \
+  --calibration robust-sigma \
+  --sigma 4.5 \
+  --output robust-report.json
+```
 
-Anomaly-detection work often becomes difficult to reproduce because preprocessing, window alignment and thresholding are mixed into model code. This project keeps those concerns explicit so models can be compared fairly.
+## Example report shape
 
-## Evaluation philosophy
+```json
+{
+  "dataset": "mixed-synthetic-v1",
+  "calibration_end": 1750,
+  "fit_end": 1137,
+  "records": [
+    {
+      "detector": "causal_rolling_mad",
+      "threshold": 0.0,
+      "calibration_method": "quantile:0.99500",
+      "evaluation": {
+        "point": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "event": {
+          "event_recall": 0.0,
+          "false_positive_runs": 0,
+          "mean_detection_delay": null
+        }
+      }
+    }
+  ]
+}
+```
 
-Pointwise accuracy is often misleading under heavy class imbalance. The lab therefore favors:
+The numeric values above are structural placeholders, not advertised benchmark results. Run the CLI for the current deterministic results.
 
-- precision / recall / F1 on injected or labeled anomalies
-- event-level detection rate
-- false alarms per unit time
-- detection delay
-- threshold sensitivity
-- score distributions and time-aligned plots
+## CI quality gates
 
-## Roadmap
+GitHub Actions verifies:
 
-1. robust statistical baseline
-2. PCA reconstruction baseline
-3. PyTorch dense autoencoder
-4. CNN-LSTM and causal TCN-LSTM autoencoders
-5. VAE-family benchmark interface
-6. config-driven experiment runner
-7. saved metrics and plots
-8. CI smoke tests
+- editable package installation;
+- dependency consistency with `pip check`;
+- Ruff linting;
+- detector causality/prefix invariance tests;
+- point and event metric semantics;
+- leakage-aware benchmark orchestration;
+- the real CLI benchmark;
+- benchmark JSON structure;
+- wheel build;
+- installation and execution from the built wheel in an isolated environment.
 
-## Portfolio context
+## Design decisions
 
-The point of this repository is not to advertise one benchmark number. It demonstrates the full engineering workflow around anomaly detection: **data preparation, windowing, modeling, score calibration, evaluation and failure analysis**.
+### Why not tune on labeled evaluation anomalies?
+
+Because the main target use case is unsupervised or weakly supervised anomaly detection. Evaluation labels are for measuring behavior, not selecting a threshold after the fact.
+
+### Why refit after threshold calibration?
+
+The holdout is still clean historical data. Once the threshold has been frozen, using all clean history to establish detector state reflects what a deployed system could legitimately know before the evaluation period begins.
+
+### Why keep simple baselines?
+
+A larger model only matters if it beats well-defined baselines under the same temporal split and threshold policy. Robust statistics and PCA are therefore useful controls, not filler.
+
+### Why no private flight-test examples?
+
+Portfolio code should be independently reproducible. The architecture and evaluation concerns are transferable; proprietary data is not required to demonstrate them.
+
+## Neural-model roadmap
+
+The detector interface is intentionally small enough for future public implementations of:
+
+- dense autoencoders;
+- CNN/LSTM reconstruction models;
+- causal TCN reconstruction models;
+- VAE-family anomaly scoring.
+
+Those models are **roadmap items**, not claimed as implemented in this public branch. Any future neural detector should use the same clean fit/calibration/evaluation boundaries and event-level metrics rather than introducing a separate benchmark path.
+
+## Interview topics this repo supports
+
+This project gives concrete code for discussing:
+
+- unsupervised anomaly detection when labels are scarce;
+- threshold calibration without test leakage;
+- causal vs centered rolling statistics;
+- point anomalies vs collective/event anomalies;
+- reconstruction error;
+- robust statistics and MAD;
+- adaptive baselines under drift;
+- class imbalance;
+- event-level recall and detection delay;
+- false alarms as operational cost;
+- fair model comparison under a fixed evaluation protocol.
