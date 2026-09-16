@@ -6,6 +6,5 @@ same leakage-aware benchmark exposed by the installed ``anomaly-lab`` CLI.
 
 from anomaly_lab.cli import main
 
-
 if __name__ == "__main__":
     raise SystemExit(main(["benchmark"]))

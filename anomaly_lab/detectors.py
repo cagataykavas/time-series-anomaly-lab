@@ -107,7 +107,9 @@ class AdaptiveEWMADetector:
             residual = float(value) - mean
             scores[index] = abs(residual) / sigma
 
-            clipped = float(np.clip(residual, -self.adaptation_clip * sigma, self.adaptation_clip * sigma))
+            clipped = float(
+                np.clip(residual, -self.adaptation_clip * sigma, self.adaptation_clip * sigma)
+            )
             updated_value = mean + clipped
             new_mean = (1.0 - self.alpha) * mean + self.alpha * updated_value
             deviation = updated_value - mean
