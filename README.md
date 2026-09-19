@@ -111,10 +111,39 @@ The lab reports both point-level and event-level behavior.
 
 Why event metrics matter: firing 30 times inside one five-minute incident should not necessarily be interpreted the same way as detecting 30 independent incidents.
 
+## Operational alert lifecycle
+
+`AlertPolicy` converts detector scores into an operational alert state instead of paging on
+every threshold crossing. It combines:
+
+- a high trigger threshold and lower recovery threshold for hysteresis;
+- configurable consecutive-sample confirmation for opening and recovery;
+- deterministic open/recover transitions with machine-readable reasons;
+- alert counts, active-point counts and observed durations;
+- fail-closed validation for invalid policies and non-finite score streams.
+
+```python
+from anomaly_lab.alerting import AlertPolicy, apply_alert_policy
+
+policy = AlertPolicy(
+    trigger_threshold=5.0,
+    recovery_threshold=2.0,
+    consecutive_trigger=3,
+    consecutive_recovery=5,
+)
+report = apply_alert_policy(scores, policy)
+```
+
+Debounce reduces isolated spikes and hysteresis prevents flapping near the trigger threshold.
+The confirmation delay is an explicit availability trade-off and must be selected against the
+domain's maximum acceptable detection delay. This utility models one uninterrupted score
+stream; persistence across process restarts belongs in the serving layer.
+
 ## Package layout
 
 ```text
 anomaly_lab/
+├── alerting.py      # debounced, hysteretic operational alert lifecycle
 ├── calibration.py   # normal-only threshold estimation
 ├── cli.py           # reproducible command-line benchmark
 ├── detectors.py     # causal MAD, adaptive EWMA, PCA reconstruction
@@ -124,6 +153,7 @@ anomaly_lab/
 └── synthetic.py     # deterministic public-safe benchmark data
 
 tests/
+├── test_alerting.py
 ├── test_detectors.py
 ├── test_evaluation.py
 └── test_experiment.py
@@ -245,4 +275,5 @@ This project gives concrete code for discussing:
 - class imbalance;
 - event-level recall and detection delay;
 - false alarms as operational cost;
+- alert debounce, hysteresis and detection-delay trade-offs;
 - fair model comparison under a fixed evaluation protocol.
