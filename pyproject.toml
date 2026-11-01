@@ -12,6 +12,7 @@ dependencies = ["numpy>=1.26"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.12"]
+neural = ["torch>=2.2"]
 
 [project.scripts]
 anomaly-lab = "anomaly_lab.cli:main"

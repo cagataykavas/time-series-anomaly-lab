@@ -246,3 +246,50 @@ This project gives concrete code for discussing:
 - event-level recall and detection delay;
 - false alarms as operational cost;
 - fair model comparison under a fixed evaluation protocol.
+
+## Labeled neural-model comparison
+
+An optional research script compares seven 1D VAE variants and one explicitly
+inspired Transformer baseline on the labeled NAB NYC Taxi series. The seven
+VAE names come from the earlier VAE lab: VanillaVAE1D, BetaVAE1D, InfoVAE1D,
+WAVAE1D, GraphVAE1D, FCVAE1D and StackVAE_G1D. `TiTAD-Lite (inspired)` is a
+new Transformer reconstruction baseline, **not** an official TiTAD implementation.
+The historical source for those earlier models is not present in this repository;
+the script is a reproducible reimplementation of their named model families.
+
+Install the optional PyTorch dependency and run:
+
+```bash
+pip install -e ".[neural]"
+python scripts/benchmark_vae_variants.py --epochs 30 --seed 42
+```
+
+The script downloads the public NAB series and anomaly windows, fits on an early
+normal segment, calibrates thresholds on a later normal-only holdout, freezes
+those thresholds, then evaluates on the remaining labeled period. It reports
+point precision/recall/F1, event-window recall, and false-positive runs at the
+95th and 99.5th calibration-score percentiles. Outputs are written under
+`results/`; downloaded data is kept under `data/benchmark/` and is not committed.
+
+With seed 42 and 30 epochs, the 99.5th-percentile operating point produced:
+
+| Model | Point F1 | Labeled events detected | False-positive runs |
+|---|---:|---:|---:|
+| VanillaVAE1D | 0.218 | 3/5 | 19 |
+| BetaVAE1D | 0.213 | 3/5 | 20 |
+| InfoVAE1D | 0.175 | 3/5 | 11 |
+| WAVAE1D | 0.271 | 4/5 | 9 |
+| GraphVAE1D | 0.211 | 4/5 | 59 |
+| FCVAE1D | 0.221 | 3/5 | 12 |
+| StackVAE_G1D | 0.219 | 3/5 | 12 |
+| TiTAD-Lite (inspired) | 0.479 | 5/5 | 5 |
+
+The NAB NYC Taxi series contains 10,320 half-hour observations. The benchmark
+uses the official NAB anomaly windows from
+[`combined_windows.json`](https://github.com/numenta/NAB/blob/master/labels/combined_windows.json)
+and the series from
+[`nyc_taxi.csv`](https://github.com/numenta/NAB/blob/master/data/realKnownCause/nyc_taxi.csv).
+
+This benchmark measures these reimplementations on NYC taxi demand. Its scores
+are not results from the proprietary helicopter flight-test data or evidence
+that the historical TUSAŞ models achieved the same performance.
