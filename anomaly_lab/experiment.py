@@ -123,10 +123,12 @@ def run_benchmark(
         calibration_scores = detector.score(threshold_values)
         calibration = active_calibrator.fit(calibration_scores)
 
-        # Phase 2: after the threshold is frozen, use all clean pre-evaluation
-        # history to establish the best state available at deployment time.
-        detector.fit(dataset.values[:calibration_end])
-        evaluation_scores = detector.score(evaluation_values)
+        # Keep fitted parameters fixed: refitting after calibration invalidates
+        # the calibrated score scale (especially for PCA reconstruction).
+        # Replay holdout history so causal state reaches the evaluation boundary.
+        # Detectors implement pure, prefix-invariant score calls.
+        deployment_scores = detector.score(dataset.values[fit_end:])
+        evaluation_scores = deployment_scores[len(threshold_values):]
         predictions = evaluation_scores >= calibration.threshold
         detection = DetectionResult(
             detector=detector.name,

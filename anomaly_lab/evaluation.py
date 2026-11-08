@@ -136,3 +136,23 @@ def evaluate_detection(
         point=point_metrics(labels, predictions),
         event=event_metrics(labels, predictions, events, tolerance=tolerance),
     )
+
+
+def average_precision(labels: np.ndarray, scores: np.ndarray) -> float:
+    """Non-interpolated AP, grouping equal scores to avoid order-dependent ties."""
+    truth = np.asarray(labels, dtype=bool)
+    score = np.asarray(scores, dtype=float)
+    if truth.ndim != 1 or score.ndim != 1 or len(truth) != len(score) or not len(truth):
+        raise ValueError("labels and scores must be non-empty equal-length vectors")
+    if not np.all(np.isfinite(score)):
+        raise ValueError("scores must be finite")
+    positives = int(truth.sum())
+    if not positives:
+        return 0.0
+    order = np.argsort(-score, kind="stable")
+    ranked = truth[order]
+    ends = np.r_[np.flatnonzero(np.diff(score[order])), len(score) - 1]
+    tp = np.cumsum(ranked)[ends]
+    precision = tp / (ends + 1)
+    recall = tp / positives
+    return float(np.sum(np.diff(np.r_[0.0, recall]) * precision))

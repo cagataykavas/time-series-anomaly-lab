@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
+import platform
 import random
 import urllib.request
 from collections.abc import Callable
@@ -30,6 +32,8 @@ import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
+
+from anomaly_lab.evaluation import average_precision
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data" / "benchmark"
@@ -356,6 +360,12 @@ def run(args: argparse.Namespace) -> list[dict[str, object]]:
         # Keep the fit checkpoint fixed after calibration so score scale does not
         # shift between the calibration and evaluation periods.
         test_scores = window_scores(model, values[:first_anomaly], evaluation, mean, scale)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            args.output_dir / f"scores_{i}.npz",
+            calibration=calibration_scores, evaluation=test_scores, labels=y_eval,
+        )
+        ap = average_precision(y_eval, test_scores)
         for q, threshold in thresholds.items():
             predictions = test_scores >= threshold
             point = metrics(y_eval, predictions)
@@ -367,10 +377,23 @@ def run(args: argparse.Namespace) -> list[dict[str, object]]:
             for s, e in event_eval:
                 event_mask[max(0, s - 3) : min(len(predictions), e + 3)] = True
             false_runs = count_runs(predictions & ~event_mask)
+            delays = []
+            for start, end in event_eval:
+                hits = np.flatnonzero(predictions[start:end])
+                if len(hits):
+                    delays.append(int(hits[0]))
             normal_count = int((~y_eval).sum())
             rows.append(
                 {
                     "model": spec.name,
+                    "average_precision": ap,
+                    "seed": args.seed,
+                    "event_tolerance_samples": 3,
+                    "strict_events_detected": len(delays),
+                    "mean_strict_detection_delay_samples": (
+                        float(np.mean(delays)) if delays else None
+                    ),
+                    "max_strict_detection_delay_samples": max(delays) if delays else None,
                     "threshold_quantile": q,
                     "threshold": threshold,
                     "samples_total": len(values),
@@ -412,6 +435,21 @@ def main() -> None:
         json.dumps(
             {
                 "dataset": "NAB realKnownCause/nyc_taxi",
+                "source_sha256": {
+                    path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                    for path in sorted(DATA_DIR.glob("*")) if path.is_file()
+                },
+                "environment": {
+                    "python": platform.python_version(), "torch": torch.__version__,
+                    "numpy": np.__version__,
+                },
+                "limitations": [
+                    "Single public series; not employer or flight-test data.",
+                    "Split uses first labeled anomaly; clean-history availability is assumed.",
+                    "AP/model ranking are descriptive, not a separate selection/test protocol.",
+                    "Neural scoring uses stochastic latent samples; seed and environment matter.",
+                    "NAB label windows are not exact incident onset times.",
+                ],
                 "protocol": (
                     "chronological normal-only fit/calibration; frozen thresholds; "
                     "post-boundary evaluation"

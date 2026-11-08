@@ -1,0 +1,28 @@
+Training VanillaVAE1D on 3,746 normal windows (30 epochs)
+Training BetaVAE1D on 3,746 normal windows (30 epochs)
+Training InfoVAE1D on 3,746 normal windows (30 epochs)
+Training WAVAE1D on 3,746 normal windows (30 epochs)
+Training GraphVAE1D on 3,746 normal windows (30 epochs)
+Training FCVAE1D on 3,746 normal windows (30 epochs)
+Training StackVAE_G1D on 3,746 normal windows (30 epochs)
+Training TiTAD-Lite (inspired) on 3,746 normal windows (30 epochs)
+
+Wrote evidence/seed43/nab_vae_benchmark.csv
+Wrote evidence/seed43/nab_vae_benchmark.json
+model | q | event recall | false alarm runs | point F1
+VanillaVAE1D | 0.95 | 4/5 (0.800) | 21 | 0.2260
+VanillaVAE1D | 0.995 | 3/5 (0.600) | 20 | 0.2158
+BetaVAE1D | 0.95 | 4/5 (0.800) | 27 | 0.2248
+BetaVAE1D | 0.995 | 3/5 (0.600) | 22 | 0.2166
+InfoVAE1D | 0.95 | 4/5 (0.800) | 45 | 0.2526
+InfoVAE1D | 0.995 | 3/5 (0.600) | 29 | 0.2046
+WAVAE1D | 0.95 | 3/5 (0.600) | 15 | 0.2786
+WAVAE1D | 0.995 | 3/5 (0.600) | 7 | 0.2150
+GraphVAE1D | 0.95 | 4/5 (0.800) | 137 | 0.2542
+GraphVAE1D | 0.995 | 3/5 (0.600) | 26 | 0.1764
+FCVAE1D | 0.95 | 4/5 (0.800) | 18 | 0.2235
+FCVAE1D | 0.995 | 3/5 (0.600) | 12 | 0.2189
+StackVAE_G1D | 0.95 | 4/5 (0.800) | 19 | 0.2257
+StackVAE_G1D | 0.995 | 3/5 (0.600) | 14 | 0.2184
+TiTAD-Lite (inspired) | 0.95 | 5/5 (1.000) | 15 | 0.4204
+TiTAD-Lite (inspired) | 0.995 | 4/5 (0.800) | 6 | 0.4079

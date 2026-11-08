@@ -56,3 +56,23 @@ def test_event_tolerance_can_credit_near_boundary_detection() -> None:
     assert strict.event_recall == 0.0
     assert tolerant.event_recall == 1.0
     assert tolerant.mean_detection_delay == 0
+
+
+def test_average_precision_groups_tied_scores() -> None:
+    from anomaly_lab.evaluation import average_precision
+
+    assert average_precision(np.array([1, 0]), np.array([.5, .5])) == .5
+    assert average_precision(np.array([0, 1]), np.array([.5, .5])) == .5
+    assert average_precision(np.array([1, 0, 1]), np.array([3., 2., 1.])) == (1 + 2/3)/2
+    assert average_precision(np.array([0, 0]), np.array([1., 2.])) == 0
+
+
+def test_average_precision_rejects_invalid_scores() -> None:
+    import pytest
+
+    from anomaly_lab.evaluation import average_precision
+
+    with pytest.raises(ValueError):
+        average_precision(np.array([1]), np.array([np.nan]))
+    with pytest.raises(ValueError):
+        average_precision(np.array([1, 0]), np.array([1.]))

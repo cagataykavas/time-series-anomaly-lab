@@ -36,7 +36,7 @@ def test_synthetic_calibration_region_is_clean() -> None:
     assert np.any(dataset.labels[dataset.calibration_end :])
 
 
-def test_benchmark_uses_normal_holdout_then_refits_before_evaluation() -> None:
+def test_benchmark_preserves_calibrated_model_and_replays_holdout() -> None:
     dataset = generate_synthetic_series(n=1600, seed=3)
     detector = SpyDetector()
 
@@ -49,10 +49,10 @@ def test_benchmark_uses_normal_holdout_then_refits_before_evaluation() -> None:
 
     expected_fit_end = int(dataset.calibration_end * 0.6)
     assert report.fit_end == expected_fit_end
-    assert detector.fit_lengths == [expected_fit_end, dataset.calibration_end]
+    assert detector.fit_lengths == [expected_fit_end]
     assert detector.score_lengths == [
         dataset.calibration_end - expected_fit_end,
-        len(dataset.values) - dataset.calibration_end,
+        len(dataset.values) - expected_fit_end,
     ]
     assert len(report.records) == 1
     assert report.records[0].calibration_samples == dataset.calibration_end - expected_fit_end
@@ -74,3 +74,28 @@ def test_default_benchmark_runs_multiple_detector_families() -> None:
         assert 0.0 <= record.evaluation.point.recall <= 1.0
         assert 0.0 <= record.evaluation.event.event_recall <= 1.0
         assert np.isfinite(record.threshold)
+
+
+def test_evaluation_values_cannot_change_frozen_threshold() -> None:
+    from dataclasses import replace
+
+    original = generate_synthetic_series(n=1600, seed=3)
+    changed_values = original.values.copy()
+    changed_values[original.calibration_end:] *= 100
+    changed = replace(original, values=changed_values)
+    first = run_benchmark(original)
+    second = run_benchmark(changed)
+    for a, b in zip(first.records, second.records, strict=True):
+        assert a.threshold == b.threshold
+
+
+def test_pca_benchmark_matches_fixed_model_contiguous_scoring() -> None:
+    from anomaly_lab.detectors import PCAWindowReconstructionDetector
+
+    dataset = generate_synthetic_series(n=1600, seed=7)
+    report = run_benchmark(dataset, detectors=(PCAWindowReconstructionDetector(),))
+    model = PCAWindowReconstructionDetector().fit(dataset.values[:report.fit_end])
+    scores = model.score(dataset.values[report.fit_end:])
+    cut = dataset.calibration_end - report.fit_end
+    assert report.records[0].threshold == np.quantile(scores[:cut], .995)
+    assert report.records[0].score_summary.median == np.median(scores[cut:])

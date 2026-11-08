@@ -4,7 +4,7 @@ A public-safe, executable benchmark for **time-series anomaly scoring, threshold
 
 This repository deliberately focuses on the engineering details that make anomaly-detection experiments trustworthy: temporal leakage, calibration boundaries, causal scoring, event definitions, false alarms, detection delay, and reproducible model comparison.
 
-It uses synthetic data only. It contains **no employer data, flight-test data, internal labels, proprietary thresholds, or private model artifacts**.
+The core benchmark uses synthetic data; the optional neural benchmark uses public NAB data. It contains **no employer data, flight-test data, internal labels, proprietary thresholds, or private model artifacts**.
 
 ## Why this is more than a detector demo
 
@@ -23,9 +23,8 @@ flowchart LR
     C --> CS
     CS --> T[Frozen threshold]
 
-    F --> RF[Refit on all clean pre-evaluation history]
-    C --> RF
-    RF --> ES[Evaluation scores]
+    M --> ES[Fixed-model evaluation scores]
+    C --> ES
     E --> ES
     T --> P[Predictions]
     ES --> P
@@ -85,7 +84,7 @@ Two calibration strategies are implemented:
 
 Calibration scores come from a later **normal-only holdout**, not from the detector's fit segment and not from the evaluation anomalies.
 
-After calibration, the detector is refit on all clean history available before deployment. The frozen threshold is then used on the untouched evaluation region.
+After calibration, fitted parameters stay fixed. The holdout is replayed before evaluation scoring to advance causal history without changing the calibrated model or score scale.
 
 ## Evaluation
 
@@ -208,9 +207,9 @@ GitHub Actions verifies:
 
 Because the main target use case is unsupervised or weakly supervised anomaly detection. Evaluation labels are for measuring behavior, not selecting a threshold after the fact.
 
-### Why refit after threshold calibration?
+### Why keep the fitted model fixed after calibration?
 
-The holdout is still clean historical data. Once the threshold has been frozen, using all clean history to establish detector state reflects what a deployed system could legitimately know before the evaluation period begins.
+Refitting changes PCA basis and normalization, making a previously calibrated threshold inconsistent with the new score scale. We retain the fit checkpoint and replay holdout history to reach the evaluation boundary.
 
 ### Why keep simple baselines?
 
@@ -293,3 +292,18 @@ and the series from
 This benchmark measures these reimplementations on NYC taxi demand. Its scores
 are not results from the proprietary helicopter flight-test data or evidence
 that the historical TUSAŞ models achieved the same performance.
+
+### Audit-ready neural output
+
+The benchmark also reports tie-aware average precision, event detection with its
+explicit three-sample boundary tolerance, and strict within-window detection
+delays in samples (NYC Taxi has 30-minute samples). Raw calibration/evaluation
+scores and labels are retained per model as NPZ files. JSON includes SHA-256
+hashes of the downloaded inputs and Python/NumPy/PyTorch versions.
+
+Run different seeds into different output directories. Variability across seeds
+on the same five event windows is **not** additional independent event evidence.
+Ranking models on this series is descriptive: a claimed generalization gain
+requires separate model-selection and final-test series. Normal-only fit history
+is selected using the first labeled anomaly, so this benchmark assumes verified
+clean historical data rather than demonstrating fully label-free deployment.

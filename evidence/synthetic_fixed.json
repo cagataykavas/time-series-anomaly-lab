@@ -1,0 +1,113 @@
+{
+  "dataset": "mixed-synthetic-v1",
+  "total_samples": 5000,
+  "calibration_end": 1750,
+  "fit_end": 1137,
+  "records": [
+    {
+      "detector": "causal_rolling_mad",
+      "threshold": 3.4649749053417462,
+      "calibration_method": "quantile:0.99500",
+      "calibration_samples": 613,
+      "fit_samples": 1137,
+      "evaluation_samples": 3250,
+      "score_summary": {
+        "median": 1.168878627885804,
+        "p95": 3.506274319479202,
+        "p99": 11.147005292565968,
+        "maximum": 28.763430693201716
+      },
+      "evaluation": {
+        "point": {
+          "precision": 0.38922155688622756,
+          "recall": 0.12452107279693486,
+          "f1": 0.18867924528301888,
+          "specificity": 0.9626099706744868,
+          "tp": 65,
+          "fp": 102,
+          "fn": 457,
+          "tn": 2626
+        },
+        "event": {
+          "detected_events": 18,
+          "total_events": 18,
+          "event_recall": 1.0,
+          "false_positive_runs": 19,
+          "false_alarms_per_1000_normal_points": 6.964809384164223,
+          "mean_detection_delay": 1.2222222222222223,
+          "max_detection_delay": 22
+        }
+      }
+    },
+    {
+      "detector": "adaptive_ewma",
+      "threshold": 2.7298352223524027,
+      "calibration_method": "quantile:0.99500",
+      "calibration_samples": 613,
+      "fit_samples": 1137,
+      "evaluation_samples": 3250,
+      "score_summary": {
+        "median": 0.740511505975152,
+        "p95": 1.8648646913084752,
+        "p99": 7.309143769783767,
+        "maximum": 25.10414482390617
+      },
+      "evaluation": {
+        "point": {
+          "precision": 0.631578947368421,
+          "recall": 0.06896551724137931,
+          "f1": 0.12435233160621761,
+          "specificity": 0.9923020527859238,
+          "tp": 36,
+          "fp": 21,
+          "fn": 486,
+          "tn": 2707
+        },
+        "event": {
+          "detected_events": 18,
+          "total_events": 18,
+          "event_recall": 1.0,
+          "false_positive_runs": 7,
+          "false_alarms_per_1000_normal_points": 2.565982404692082,
+          "mean_detection_delay": 1.2222222222222223,
+          "max_detection_delay": 22
+        }
+      }
+    },
+    {
+      "detector": "pca_window_reconstruction",
+      "threshold": 0.09126685101622446,
+      "calibration_method": "quantile:0.99500",
+      "calibration_samples": 613,
+      "fit_samples": 1137,
+      "evaluation_samples": 3250,
+      "score_summary": {
+        "median": 0.043134142599486905,
+        "p95": 1.251046519250593,
+        "p99": 1.6830398901260066,
+        "maximum": 1.8854476890829375
+      },
+      "evaluation": {
+        "point": {
+          "precision": 0.09595959595959595,
+          "recall": 0.14559386973180077,
+          "f1": 0.1156773211567732,
+          "specificity": 0.7375366568914956,
+          "tp": 76,
+          "fp": 716,
+          "fn": 446,
+          "tn": 2012
+        },
+        "event": {
+          "detected_events": 18,
+          "total_events": 18,
+          "event_recall": 1.0,
+          "false_positive_runs": 0,
+          "false_alarms_per_1000_normal_points": 0.0,
+          "mean_detection_delay": 14.833333333333334,
+          "max_detection_delay": 267
+        }
+      }
+    }
+  ]
+}
