@@ -1,0 +1,194 @@
+{
+  "input": {
+    "samples": 72935,
+    "window": 50,
+    "seed": 2026,
+    "sha256": "8aadcd4a41f565e77625c37922d7ef30f04136d7d0148f6dc69fdf8b89588266",
+    "kind": "synthetic matched-shape signal, not company data"
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "torch": "2.15.0+cpu",
+    "numpy": "2.5.4",
+    "threads": 1,
+    "processor": ""
+  },
+  "source_sha256": {
+    "original.py": "5237fa37897d3b441b09023daf944a095b0907f28ae267caea268d6543cc87b2",
+    "optimized.py": "78bf78303382638b46a2f6c6f9febf8119ee0714207e3dfc489006d733c47829",
+    "benchmark.py": "ec11483092b036ae4c07d8dd22459341000a037874281faaff7475bd0626f7b5"
+  },
+  "window_setup": {
+    "baseline_seconds": [
+      0.10215284999958385,
+      0.09849825000037526,
+      0.10264849299983325,
+      0.10884547099976771,
+      0.1153150119998827,
+      0.10735368599944195,
+      0.11165257899938297,
+      0.10649256400029117,
+      0.10761441199974797
+    ],
+    "optimized_seconds": [
+      0.0002568299996710266,
+      0.00025315400034742197,
+      0.00025725000068632653,
+      0.0002714610000111861,
+      0.0002702090005186619,
+      0.00027127100020152284,
+      0.0002671250003913883,
+      0.000260474999777216,
+      0.00027002899969374994
+    ],
+    "median_speedup": 401.8855810656009,
+    "baseline_median_seconds": 0.10735368599944195,
+    "optimized_median_seconds": 0.0002671250003913883
+  },
+  "window_memory": {
+    "baseline_tensor_storage_bytes": 14868740,
+    "optimized_tensor_storage_bytes": 291740,
+    "exact_legacy_window_parity": true,
+    "windows": 72885
+  },
+  "inference": {
+    "baseline_seconds": [
+      5.636260437000601,
+      5.817705682999986,
+      5.991853378999622
+    ],
+    "optimized_seconds": [
+      0.16389418099970499,
+      0.1606957340000008,
+      0.17408307000005152
+    ],
+    "median_speedup": 35.49671896533323,
+    "baseline_median_seconds": 5.817705682999986,
+    "optimized_median_seconds": 0.16389418099970499,
+    "mode": "same original VanillaVAE weights; posterior-mean evaluation in both serial and batched paths, no quality claim",
+    "max_absolute_output_difference": 2.384185791015625e-07
+  },
+  "aggregation": {
+    "baseline_seconds": [
+      0.15023059099985403,
+      0.14549912800066522,
+      0.14762304699979722,
+      0.1536706659999254,
+      0.1643633369994859,
+      0.15846132499973464,
+      0.158426242999667
+    ],
+    "optimized_seconds": [
+      0.009166585999992094,
+      0.008880655000211846,
+      0.009571154999321152,
+      0.01023960100064869,
+      0.01155251300042437,
+      0.009885749000204669,
+      0.010250709000501956
+    ],
+    "median_speedup": 15.544665962765583,
+    "baseline_median_seconds": 0.1536706659999254,
+    "optimized_median_seconds": 0.009885749000204669,
+    "legacy_uncovered_tail": 1
+  },
+  "model_smoke": [
+    {
+      "model": "VanillaVAE1D",
+      "baseline": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      },
+      "repaired": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      }
+    },
+    {
+      "model": "BetaVAE1D",
+      "baseline": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      },
+      "repaired": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      }
+    },
+    {
+      "model": "InfoVAE1D",
+      "baseline": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      },
+      "repaired": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      }
+    },
+    {
+      "model": "WAVAE1D",
+      "baseline": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      },
+      "repaired": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      }
+    },
+    {
+      "model": "GraphVAE1D",
+      "baseline": {
+        "passed": false,
+        "error": "RuntimeError: The size of tensor a (2500) must match the size of tensor b (64) at non-singleton dimension 1"
+      },
+      "repaired": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      }
+    },
+    {
+      "model": "FCVAE1D",
+      "baseline": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      },
+      "repaired": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      }
+    },
+    {
+      "model": "StackVAE_G1D",
+      "baseline": {
+        "passed": false,
+        "error": "RuntimeError: addmm: mat1 and mat2 shapes cannot be multiplied (64x50 and 1x64)"
+      },
+      "repaired": {
+        "passed": true,
+        "training_batches": 8,
+        "finite_losses": true
+      }
+    }
+  ],
+  "limitations": [
+    "Timing on shared CPU host, no GPU or production throughput claim.",
+    "Synthetic size matches historical sample count only; no real flight-data performance inferred.",
+    "Original windows drop final window. Speed/memory comparison preserves that count; inclusive fix tested separately.",
+    "New default evaluation uses latent means, unlike original stochastic evaluation. Inference speed compares mean mode on both paths.",
+    "One-epoch 512-sample model smoke verifies execution and finite losses, not convergence or anomaly accuracy.",
+    "Original train/calibrate/score reuse same data; new frozen-threshold helpers do not establish a historical employer validation."
+  ]
+}
